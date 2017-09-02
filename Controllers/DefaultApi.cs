@@ -20,6 +20,8 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using HistorianService.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using ServiceStore;
+using Microsoft.Extensions.Logging;
 
 namespace HistorianService.Controllers
 { 
@@ -27,7 +29,16 @@ namespace HistorianService.Controllers
     /// 
     /// </summary>
     public class DefaultApiController : Controller
-    { 
+    {
+
+     private readonly IStore store;
+     private readonly ILogger logger;
+
+     public DefaultApiController(IStore store, ILogger<DefaultApiController> logger)
+     {
+         this.store = store;
+         this.logger = logger;
+     }
 
         /// <summary>
         /// Add data generated from a device to the aggregator
@@ -40,12 +51,29 @@ namespace HistorianService.Controllers
         /// <response code="201">Data added successfully.</response>
         /// <response code="401">Invalid input parameter.</response>
         /// <response code="500">An unexpected error occurred.</response>
-        [HttpPost]
-        [Route("/v1/deviceData/{deviceType}/{deviceId}")]
+       [HttpPost]
+        [Route("/v1/deviceData/{deviceId}")]
         [SwaggerOperation("AddDeviceData")]
-        public virtual void AddDeviceData([FromRoute]string deviceType, [FromRoute]string deviceId, [FromQuery]string dataPointId, [FromQuery]float? value)
-        { 
-            throw new NotImplementedException();
+        [SwaggerResponse(201, type: typeof(float?))]
+        public virtual IActionResult AddDeviceData([FromRoute]string deviceId, [FromQuery]string datapointId, [FromQuery]DateTime? timestamp, [FromQuery]float? value)
+        {
+            var key = $"{deviceId};{datapointId}";
+
+            if (!this.store.Exists(key) && value.HasValue)
+            {
+                this.store.Add(key, value.Value);
+                this.logger.LogInformation($"Added {value.Value} for {key} to the store at {timestamp}.");
+            }
+
+            if (!value.HasValue){
+                this.logger.LogError($"No value found for {key}.");
+                return BadRequest($"No data value for device: {deviceId} and datapoint {datapointId}");
+            }
+
+            var average = this.store.GetAll().Where( i => i.Key.StartsWith(deviceId)).Average( v => v.Value);
+
+            this.logger.LogInformation($"Returning {average}.");
+            return Created("", average);
         }
 
 

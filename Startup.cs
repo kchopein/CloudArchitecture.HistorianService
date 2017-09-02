@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
+using ServiceStore;
 
 namespace HistorianService
 {
@@ -31,6 +32,8 @@ namespace HistorianService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<IStore>(new Store());
+
             // Add framework services.
             services.AddMvc()
                 .AddJsonOptions(
