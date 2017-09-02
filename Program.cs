@@ -30,5 +30,6 @@ namespace HistorianService
                 .UseUrls("http://+:5000")
                 .UseStartup<Startup>()
                 .Build();
+                
     }
 }
